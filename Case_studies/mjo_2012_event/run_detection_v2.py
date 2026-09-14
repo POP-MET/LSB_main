@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.append('/home/nma/EXP_1d_diurnal_mse_TWP/claude_work/ext/LSB_main/Modules')
-from algo_main import (LSB_detector, MANUS_V0, MANUS_V2, load_met, load_sun, load_sst_erddap_csv,
+from algo_main import (LSB_detector, MANUS_V0, MANUS_V2, MANUS_V3, load_met, load_sun, load_sst_erddap_csv,
                        load_gndrad)
 
 # Manus detector v2 vs v1, consistency check with the ERA5 island convergence index
@@ -39,6 +39,10 @@ v2.to_csv(f'{OUT}/lsb_filter10_2012.csv')
 # optional v2b: observation-only onshore-background mode for filter 4
 v2b = LSB_detector({**MANUS_V2, 'f4_onshore_sunrise': 0.5, 'f4_onshore_rise': 0.5}).run_filter10(met, sun, sst)
 v2b.to_csv(f'{OUT}/lsb_filter10_2012_v2b_f4obs.csv')
+v3 = LSB_detector(MANUS_V3).run_filter10(met, sun, sst)
+v3.to_csv(f'{OUT}/lsb_filter10_2012_v3.csv')
+v3_nogap = LSB_detector({**MANUS_V3, 'persist_gap_h': 0.0}).run_filter10(met, sun, sst)
+v3_gap15 = LSB_detector({**MANUS_V3, 'cess_sustain_h': 1.0}).run_filter10(met, sun, sst)
 
 
 def kappa(a, b):
@@ -49,7 +53,7 @@ def kappa(a, b):
 
 
 rows = []
-for name, res in [('v1', v1), ('v2', v2), ('v2b', v2b)]:
+for name, res in [('v1', v1), ('v2', v2), ('v2b', v2b), ('v3', v3), ('v3 no persist gap', v3_nogap), ('v3 + cess sustain 1 h', v3_gap15)]:
     for ph, (a, b) in list(PHASES.items()) + [('all', EVENT)]:
         r = res.loc[a:b]
         sb = r['sea_breeze'].astype(bool)
@@ -73,12 +77,9 @@ print('\nremaining disagreements v2 vs reference:')
 print(dis[['phase', 'sea_breeze', 'ref_sb_like', 'first_fail', 'ci_12_16', 'onshore_bg', 'speed_bg']].round(2).to_string())
 j.to_csv(f'{OUT}/v2_vs_reference_days.csv')
 
-print('\nv2b vs v2 changes:')
-k = v2b[['sea_breeze', 'first_fail', 'f4_onshore_bg', 'onshore_sunrise', 'onset']].join(v2[['sea_breeze', 'onset']], rsuffix='_v2').join(ci).join(ref)
-print(k[k['sea_breeze'] != k['sea_breeze_v2']].round(2).to_string())
-for thr in [0.25, 0.5, 1.0]:
-    for rise in [0.25, 0.5, 1.0]:
-        r = LSB_detector({**MANUS_V2, 'f4_onshore_sunrise': thr, 'f4_onshore_rise': rise}).run_filter10(met, sun, sst)
-        sb = r['sea_breeze'].astype(bool); rf = ref.reindex(r.index).fillna(False).astype(bool)
-        print(f'f4_onshore_sunrise {thr} rise {rise}: SB', {p: int(sb.loc[a:b].sum()) for p, (a, b) in PHASES.items()},
-              f'agreement {float((sb == rf).mean()):.2f} kappa {kappa(sb, rf):.2f}')
+print('\nv3 vs v2b changes (sea_breeze or onset or cessation):')
+k = v3[['sea_breeze', 'first_fail', 'onset', 'cessation', 'onshore_frac']].join(
+    v2b[['sea_breeze', 'first_fail', 'onset', 'cessation', 'onshore_frac']], rsuffix='_v2b').join(ci).join(ref)
+chg = k[(k['sea_breeze'] != k['sea_breeze_v2b']) | (k['onset'].astype(str) != k['onset_v2b'].astype(str))
+        | (k['cessation'].astype(str) != k['cessation_v2b'].astype(str))]
+print(chg.round(2).to_string())

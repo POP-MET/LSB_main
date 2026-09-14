@@ -10,6 +10,9 @@ AZORIN_2011 = {
     'prev_ws_change': 1.5,              # filter 4
     'f4_onshore_sunrise': None,         # m/s; station onshore wind at sunrise >= this -> onshore-background mode (None = off)
     'f4_onshore_rise': 0.5,             # m/s; onshore component rise sunrise -> onset required in that mode
+    'f4_onset_sustain_h': 0.0,          # h; rise must hold as a mean over [onset, onset + this] in that mode
+    'cess_sustain_h': 0.0,              # h; calm/offshore must last this long to end the breeze (filter 6)
+    'persist_gap_h': 0.0,               # h; non-onshore runs this short count as onshore (persistence)
     'coast_normal': 130.0,              # deg, direction the sea lies from the site (onshore = wind from here)
     'prev_ws_ref': 'step',              # 'step' (paper), 'ws' or 'pre_onset'
     'pre_onset_start_h': -1.0,          # used with 'pre_onset', from LSR
@@ -50,4 +53,13 @@ MANUS_V2 = {
     **MANUS_V0,
     'air_sea_ref': 'skin',              # land-sea contrast from ground skin T (air T is within ~1 K of SST)
     'air_sea_dt': 0.0,                  # land warmer than sea
+}
+
+# Manus v3: v2 + onshore-background mode for filter 4 (sustained 1 h strengthening) + 1 h gap allowance in persistence
+MANUS_V3 = {
+    **MANUS_V2,
+    'f4_onshore_sunrise': 0.5,          # station onshore wind already >= 0.5 m/s around sunrise
+    'f4_onshore_rise': 0.5,
+    'f4_onset_sustain_h': 1.0,
+    'persist_gap_h': 1.0,
 }

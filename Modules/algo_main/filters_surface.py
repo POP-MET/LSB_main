@@ -123,13 +123,13 @@ class LSB_detector:
         offshore = in_sector(met.at[prev, 'wd'], self.cfg['prev_offshore_sector'])
         return bool(calm), bool(offshore)
 
-    # onshore wind component (from coast_normal) around sunrise (LSR-1h..LSR+30min) or at time t
-    def onshore_component(self, met, lsr, t=None):
+    # mean onshore wind component (from coast_normal) around sunrise (LSR-1h..LSR+30min), or over [t, t_end]
+    def onshore_component(self, met, lsr, t=None, t_end=None):
         if t is None:
             s0 = lsr.floor('30min')
             x = met.loc[s0 - pd.Timedelta(hours=1):s0 + pd.Timedelta(minutes=30)]
         else:
-            x = met.loc[[t]] if t in met.index else met.iloc[0:0]
+            x = met.loc[t:(t_end if t_end is not None else t)]
         if len(x) == 0:
             return np.nan
         wd = np.radians(x['wd'])
@@ -154,9 +154,11 @@ class LSB_detector:
             on_sr = self.onshore_component(met, lsr)
             bg_onshore = (self.cfg.get('f4_onshore_sunrise') is not None) and pd.notna(on_sr) \
                 and on_sr >= self.cfg['f4_onshore_sunrise']
+            sustain = pd.Timedelta(hours=self.cfg.get('f4_onset_sustain_h', 0.0))
             for t in onshore.index:
                 if bg_onshore:
-                    on_t = self.onshore_component(met, None, t)
+                    # mean onshore component over [t, t + sustain] must exceed the sunrise value by f4_onshore_rise
+                    on_t = self.onshore_component(met, None, t, t + sustain)
                     if pd.notna(on_t) and on_t - on_sr >= self.cfg['f4_onshore_rise']:
                         onset = t
                         break
@@ -189,15 +191,20 @@ class LSB_detector:
         return met.loc[t0:t1]
 
     # filter 6: cessation = first step in the filter 5 window that is calm or offshore
+    # with cess_sustain_h > 0 the calm / offshore state must last that long (short dips do not end the breeze)
     def filter6_cessation(self, cwin):
         cwin = cwin.dropna(subset=['ws', 'wd'])
         calm = cwin['ws'] < self.cfg['cess_ws']
         offshore = in_sector(cwin['wd'], self.cfg['cess_offshore_sector'])
-        hit = cwin[calm | offshore]
-        if len(hit) == 0:
-            return pd.NaT, False, False
-        t = hit.index[0]
-        return t, bool(calm[t]), bool(offshore[t])
+        end = calm | offshore
+        gap = pd.Timedelta(hours=self.cfg.get('cess_sustain_h', 0.0))
+        for t in cwin.index[end.values]:
+            if gap > pd.Timedelta(0):
+                seg = end.loc[t:t + gap]
+                if seg.index[-1] < t + gap or not seg.all():
+                    continue
+            return t, bool(calm[t]), bool(offshore[t])
+        return pd.NaT, False, False
 
     def run_filter6(self, met, sun):
         f4 = self.run_filter4(met, sun)
@@ -223,11 +230,26 @@ class LSB_detector:
 
     # onshore persistence (not in the paper): fraction of steps from onset
     # to the step before cessation with onshore direction
+    # with persist_gap_h > 0, non-onshore runs no longer than the gap count as onshore
     def filter_persist(self, sb):
         wd = sb['wd'].dropna()
         if len(wd) == 0:
             return np.nan, False
-        frac = float(in_sector(wd, self.cfg['onshore_sector']).mean())
+        on = in_sector(wd, self.cfg['onshore_sector']).values.copy()
+        gap_steps = int(round(self.cfg.get('persist_gap_h', 0.0) * 2))        # 30-min steps
+        if gap_steps > 0:
+            i = 0
+            while i < len(on):
+                if not on[i]:
+                    j = i
+                    while j < len(on) and not on[j]:
+                        j += 1
+                    if (j - i) <= gap_steps and i > 0 and j < len(on):
+                        on[i:j] = True
+                    i = j
+                else:
+                    i += 1
+        frac = float(on.mean())
         return frac, bool(frac >= self.cfg['onshore_persist'])
 
     def run_filter7(self, met, sun):

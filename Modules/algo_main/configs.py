@@ -8,6 +8,9 @@ AZORIN_2011 = {
     'ws_base_window_h': (-1.0, 0.5),    # sunrise wind, used with 'lsr'
     'onshore_sector': (45.0, 180.0),    # filter 3
     'prev_ws_change': 1.5,              # filter 4
+    'f4_onshore_sunrise': None,         # m/s; station onshore wind at sunrise >= this -> onshore-background mode (None = off)
+    'f4_onshore_rise': 0.5,             # m/s; onshore component rise sunrise -> onset required in that mode
+    'coast_normal': 130.0,              # deg, direction the sea lies from the site (onshore = wind from here)
     'prev_ws_ref': 'step',              # 'step' (paper), 'ws' or 'pre_onset'
     'pre_onset_start_h': -1.0,          # used with 'pre_onset', from LSR
     'prev_ws': 1.5,                     # used with 'ws'
@@ -40,4 +43,11 @@ MANUS_V0 = {
     'onshore_persist': 0.7,             # fraction of onshore steps onset -> cessation
     'use_f8': False,                    # flag only, pressure rise is the tide near the equator
     'cess_offshore_sector': (181.0, 359.0),
+}
+
+# Manus v2: observations only (ARM site); ERA5 is used for verification, not detection
+MANUS_V2 = {
+    **MANUS_V0,
+    'air_sea_ref': 'skin',              # land-sea contrast from ground skin T (air T is within ~1 K of SST)
+    'air_sea_dt': 0.0,                  # land warmer than sea
 }

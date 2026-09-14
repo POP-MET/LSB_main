@@ -60,3 +60,4 @@ def load_gndrad(gnd_glob, lt_offset_h=10, freq='30min'):
     x[ds['qc_sfc_ir_temp'].values != 0] = np.nan
     s = pd.Series(x, index=pd.DatetimeIndex(ds['time'].values) + pd.Timedelta(hours=lt_offset_h), name='skin_T')
     return s.resample(freq).mean()
+

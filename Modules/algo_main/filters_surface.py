@@ -123,6 +123,20 @@ class LSB_detector:
         offshore = in_sector(met.at[prev, 'wd'], self.cfg['prev_offshore_sector'])
         return bool(calm), bool(offshore)
 
+    # onshore wind component (from coast_normal) around sunrise (LSR-1h..LSR+30min) or at time t
+    def onshore_component(self, met, lsr, t=None):
+        if t is None:
+            s0 = lsr.floor('30min')
+            x = met.loc[s0 - pd.Timedelta(hours=1):s0 + pd.Timedelta(minutes=30)]
+        else:
+            x = met.loc[[t]] if t in met.index else met.iloc[0:0]
+        if len(x) == 0:
+            return np.nan
+        wd = np.radians(x['wd'])
+        u, v = -x['ws'] * np.sin(wd), -x['ws'] * np.cos(wd)
+        toward = np.radians(self.cfg['coast_normal'] + 180)
+        return float(np.nanmean(u * np.sin(toward) + v * np.cos(toward)))
+
     def run_filter4(self, met, sun):
         rows = []
         for d in sun.index:
@@ -134,8 +148,19 @@ class LSB_detector:
             onshore = self.filter3_wd_onshore(hits)
 
             # onset = first onshore hit whose previous step is calm or offshore
+            # optional (observations only): if the station wind is already onshore around sunrise,
+            # require the onshore component to strengthen instead of a calm / offshore morning
             onset, calm, offshore = pd.NaT, False, False
+            on_sr = self.onshore_component(met, lsr)
+            bg_onshore = (self.cfg.get('f4_onshore_sunrise') is not None) and pd.notna(on_sr) \
+                and on_sr >= self.cfg['f4_onshore_sunrise']
             for t in onshore.index:
+                if bg_onshore:
+                    on_t = self.onshore_component(met, None, t)
+                    if pd.notna(on_t) and on_t - on_sr >= self.cfg['f4_onshore_rise']:
+                        onset = t
+                        break
+                    continue
                 calm, offshore = self.filter4_prev_ws_wd(met, t, lsr)
                 if calm or offshore:
                     onset = t
@@ -145,6 +170,8 @@ class LSB_detector:
                          'f2': len(hits) > 0,
                          'f3': len(onshore) > 0,
                          'f4': pd.notna(onset),
+                         'f4_onshore_bg': bool(bg_onshore),
+                         'onshore_sunrise': on_sr,
                          'onset': onset,
                          'prev_calm': calm if pd.notna(onset) else False,
                          'prev_offshore': offshore if pd.notna(onset) else False,

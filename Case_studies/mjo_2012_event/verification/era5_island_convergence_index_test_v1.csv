@@ -1,0 +1,4 @@
+phase,sb_days,non_sb_days,ci_sb_mean,ci_non_mean,diff,p_perm,sb_days_above_non_median,days_ci>0_sb,days_ci>0_non
+suppressed,12,10,1.29,1.5,-0.21,0.426,5/12,11/12,10/10
+transition,4,4,1.48,-0.09,1.57,0.082,4/4,4/4,1/4
+active,4,22,1.32,-0.21,1.54,0.004,4/4,4/4,8/22

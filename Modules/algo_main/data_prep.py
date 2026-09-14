@@ -49,3 +49,14 @@ def load_sst_erddap_csv(sst_csv):
     daily = sst.groupby(sst['time'].dt.floor('D'))['sst'].mean()
     daily.index = daily.index.tz_localize(None)
     return daily
+
+
+def load_gndrad(gnd_glob, lt_offset_h=10, freq='30min'):
+    # ARM GNDRAD ground (skin) IR temperature, degC, 30-min LT
+    files = sorted(glob.glob(gnd_glob))
+    ds = xr.open_mfdataset(files, combine='by_coords', data_vars=['sfc_ir_temp', 'qc_sfc_ir_temp'],
+                           coords='minimal', compat='override').load()
+    x = ds['sfc_ir_temp'].values.astype(float) - 273.15
+    x[ds['qc_sfc_ir_temp'].values != 0] = np.nan
+    s = pd.Series(x, index=pd.DatetimeIndex(ds['time'].values) + pd.Timedelta(hours=lt_offset_h), name='skin_T')
+    return s.resample(freq).mean()

@@ -261,8 +261,11 @@ class LSB_detector:
 
     # filter 10: land warmer than the sea during the sea breeze
     # dt = max air temperature onset -> cessation minus daily SST
+    # 'air' : max air T onset -> cessation minus SST (paper)
+    # 'skin': max ground skin T onset -> cessation minus SST (needs a 'skin_T' column in met)
     def filter10_air_sea(self, sb, sst):
-        dt = sb['temp'].max() - sst
+        col = 'skin_T' if self.cfg['air_sea_ref'] == 'skin' else 'temp'
+        dt = sb[col].max() - sst
         return dt, bool(dt >= self.cfg['air_sea_dt'])
 
     def run_filter10(self, met, sun, sst):
@@ -276,7 +279,7 @@ class LSB_detector:
             if pd.isna(onset) or pd.isna(cess) or pd.isna(res.at[d, 'sst']):
                 continue
             sb = met.loc[onset:cess]
-            res.at[d, 'temp_max_sb'] = sb['temp'].max()
+            res.at[d, 'temp_max_sb'] = sb['skin_T' if self.cfg['air_sea_ref'] == 'skin' else 'temp'].max()
             res.at[d, 'air_sea_dt'], res.at[d, 'f10'] = self.filter10_air_sea(sb, res.at[d, 'sst'])
 
         # final decision, optional filters only if switched on

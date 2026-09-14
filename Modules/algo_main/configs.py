@@ -22,6 +22,7 @@ AZORIN_2011 = {
     'use_f8': True,                     # filter 8 as a gate
     'atide_anom': -0.5,                 # filter 9, hPa
     'air_sea_dt': 0.0,                  # filter 10, C
+    'air_sea_ref': 'air',               # filter 10: 'air' (paper, met air T) or 'skin' (ground skin T)
 }
 
 # current Manus choices (issue #6 flowchart defaults)

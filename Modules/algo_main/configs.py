@@ -28,7 +28,7 @@ AZORIN_2011 = {
 MANUS_V0 = {
     **AZORIN_2011,
     'onset_window_h': (1.0, 7.0),
-    'ws_change': 1.0,                   # weak, gradual onset at Manus
+    'ws_change': 0.5,                   # weak, gradual onset at Manus (rise under onshore background ~0.5 m/s)
     'ws_change_ref': 'lsr',
     'onshore_sector': (0.0, 180.0),
     'prev_ws_ref': 'pre_onset',         # gradual onset at Manus

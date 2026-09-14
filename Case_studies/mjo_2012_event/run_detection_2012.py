@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pandas as pd
@@ -7,7 +8,8 @@ from algo_main import LSB_detector, MANUS_V0, load_met, load_sun, load_sst_erdda
 
 MET_GLOB = '/home/nma/EXP_1d_diurnal_mse_TWP/claude_work/data/twpmetC1.b1/twpmetC1.b1.2012*.cdf'
 SUN_CSV = '/home/nma/EXP_1d_diurnal_mse_TWP/claude_work/ext/LSB_main/LSB_detectionv2/Datasets/sunrise_sunset_twp.csv'
-OUT = '/home/nma/EXP_1d_diurnal_mse_TWP/claude_work/outputs'
+OUT = '/home/nma/EXP_1d_diurnal_mse_TWP/claude_work/outputs/lsb_manus_v1'
+os.makedirs(OUT, exist_ok=True)
 
 # event window (LT), same as the MSE composite
 EVENT = ('2012-02-15', '2012-04-10')

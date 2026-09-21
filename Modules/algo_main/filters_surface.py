@@ -317,10 +317,16 @@ class LSB_detector:
         dt = sb[col].max() - sst
         return dt, bool(dt >= self.cfg['air_sea_dt'])
 
-    def run_filter10(self, met, sun, sst):
+    def run_filter10(self, met, sun, sst=None):
         res = self.run_filter8(met, sun)
         res['f10'] = False
-        res['sst'] = sst.reindex(res.index).values
+        # sst is optional: with use_f10 off the station record alone drives the detection,
+        # which is what a MET-only run does. filter 10 rejected no day in either MJO event,
+        # so switching it off reproduces the same day list where both are available.
+        if sst is None:
+            res['sst'] = np.nan
+        else:
+            res['sst'] = sst.reindex(res.index).values
         res['temp_max_sb'] = np.nan
         res['air_sea_dt'] = np.nan
         for d in res.index:
@@ -332,9 +338,11 @@ class LSB_detector:
             res.at[d, 'air_sea_dt'], res.at[d, 'f10'] = self.filter10_air_sea(sb, res.at[d, 'sst'])
 
         # final decision, optional filters only if switched on
-        gates = ['f2', 'f3', 'f4', 'f6', 'f7', 'fp', 'f10']
+        gates = ['f2', 'f3', 'f4', 'f6', 'f7', 'fp']
         if self.cfg['use_f8']:
-            gates.insert(gates.index('f10'), 'f8')
+            gates.append('f8')
+        if self.cfg.get('use_f10', True):
+            gates.append('f10')
         flags = res[gates].fillna(False).astype(bool)
         res['sea_breeze'] = flags.all(axis=1)
         res['first_fail'] = [next((g for g in gates if not r[g]), '') for _, r in flags.iterrows()]

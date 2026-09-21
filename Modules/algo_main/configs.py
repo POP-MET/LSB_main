@@ -1,0 +1,65 @@
+
+# Azorin-Molina, Tijm & Chen (2011) defaults
+AZORIN_2011 = {
+    'lt_offset_h': 10,
+    'onset_window_h': (1.0, 7.5),       # filter 1, LSR +1h to +7:30h
+    'ws_change': 1.5,                   # filter 2
+    'ws_change_ref': 'step',            # 'step' (paper) or 'lsr'
+    'ws_base_window_h': (-1.0, 0.5),    # sunrise wind, used with 'lsr'
+    'onshore_sector': (45.0, 180.0),    # filter 3
+    'prev_ws_change': 1.5,              # filter 4
+    'f4_onshore_sunrise': None,         # m/s; station onshore wind at sunrise >= this -> onshore-background mode (None = off)
+    'f4_onshore_rise': 0.5,             # m/s; onshore component rise sunrise -> onset required in that mode
+    'f4_onset_sustain_h': 0.0,          # h; rise must hold as a mean over [onset, onset + this] in that mode
+    'cess_sustain_h': 0.0,              # h; calm/offshore must last this long to end the breeze (filter 6)
+    'persist_gap_h': 0.0,               # h; non-onshore runs this short count as onshore (persistence)
+    'coast_normal': 130.0,              # deg, direction the sea lies from the site (onshore = wind from here)
+    'prev_ws_ref': 'step',              # 'step' (paper), 'ws' or 'pre_onset'
+    'pre_onset_start_h': -1.0,          # used with 'pre_onset', from LSR
+    'prev_ws': 1.5,                     # used with 'ws'
+    'prev_offshore_sector': (181.0, 44.0),
+    'cess_window_h': (-1.0, 5.0),       # filter 5, LSS -1h to +5h
+    'cess_ws': 1.5,                     # filter 6
+    'cess_offshore_sector': (226.0, 44.0),
+    'ws_max': 13.9,                     # filter 7
+    'onshore_persist': 0.0,             # not in the paper (0 = off)
+    'pres_rise': 1.0,                   # filter 8, hPa
+    'pres_detide': None,                # None (paper), 'mean' or 's2'
+    'use_f8': True,                     # filter 8 as a gate
+    'atide_anom': -0.5,                 # filter 9, hPa
+    'air_sea_dt': 0.0,                  # filter 10, C
+    'air_sea_ref': 'air',               # filter 10: 'air' (paper, met air T) or 'skin' (ground skin T)
+}
+
+# current Manus choices (issue #6 flowchart defaults)
+MANUS_V0 = {
+    **AZORIN_2011,
+    'onset_window_h': (1.0, 7.0),
+    'ws_change': 0.5,                   # weak, gradual onset at Manus (rise under onshore background ~0.5 m/s)
+    'ws_change_ref': 'lsr',
+    'onshore_sector': (0.0, 180.0),
+    'prev_ws_ref': 'pre_onset',         # gradual onset at Manus
+    'prev_ws': 0.5,                     # calm before onset
+    'prev_offshore_sector': (181.0, 359.0),
+    'cess_window_h': (-3.0, 5.0),       # earlier start, breeze can end before LSS -1h
+    'cess_ws': 0.5,                     # calm at cessation
+    'onshore_persist': 0.7,             # fraction of onshore steps onset -> cessation
+    'use_f8': False,                    # flag only, pressure rise is the tide near the equator
+    'cess_offshore_sector': (181.0, 359.0),
+}
+
+# Manus v2: observations only (ARM site); ERA5 is used for verification, not detection
+MANUS_V2 = {
+    **MANUS_V0,
+    'air_sea_ref': 'skin',              # land-sea contrast from ground skin T (air T is within ~1 K of SST)
+    'air_sea_dt': 0.0,                  # land warmer than sea
+}
+
+# Manus v3: v2 + onshore-background mode for filter 4 (sustained 1 h strengthening) + 1 h gap allowance in persistence
+MANUS_V3 = {
+    **MANUS_V2,
+    'f4_onshore_sunrise': 0.5,          # station onshore wind already >= 0.5 m/s around sunrise
+    'f4_onshore_rise': 0.5,
+    'f4_onset_sustain_h': 1.0,
+    'persist_gap_h': 1.0,
+}
